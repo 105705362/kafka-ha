@@ -9,14 +9,16 @@ This repository includes base manifests and operator files. They can be used for
 ```plain
 export BOSH_ENVIRONMENT=<bosh-alias>
 export BOSH_DEPLOYMENT=kafka
-git clone https://github.com/cloudfoundry-community/kafka-boshrelease.git
-bosh deploy kafka-boshrelease/manifests/kafka.yml \
-  -o <(kafka-boshrelease/manifests/operators/pick-from-cloud-config.sh kafka-boshrelease/manifests/kafka.yml)
+bosh deploy kafka-boshrelease/manifests/kafka-src.yml 
+bosh deploy kafka-boshrelease/manifests/kafka-dest.yml 
 
-bosh run-errand sanity-test
 ```
 
-If your BOSH does not have Credhub/Config Server, then remember `--vars-store` to allow generation of passwords and certificates.
+If you are deploying this in intranet (without internet access or blocked by GFW, please try to download required packages indicated in manifest.
+
+You might also have to upload corresponding stemcell which is used in this release. Please find the version in manifest and try to download and upload appropriately.
+
+
 
 ### Topics
 
@@ -26,6 +28,29 @@ You can pre-define some simple topics using an operator script `./manifests/oper
 bosh deploy kafka-boshrelease/manifests/kafka.yml \
   -o <(kafka-boshrelease/manifests/operators/pick-from-cloud-config.sh kafka-boshrelease/manifests/kafka.yml) \
   -o <(kafka-boshrelease/manifests/operators/simple-topics.sh test1 test2)
+```
+
+But I prefer to do it manually, please try to download and install confluent toolkits (https://www.confluent.io/)
+please find corresponding commands to create, consume and produce messages on kafka service. There are some examples as follows:
+
+```
+kafka-topics.sh --create \
+--topic test.replica \
+--zookeeper zk-0.zk-svc.default.svc.cluster.local:2181,zk-1.zk-svc.default.svc.cluster.local:2181,zk-2.zk-svc.default.svc.cluster.local:2181 \
+--partitions 3 \
+--replication-factor 2
+```
+
+```
+
+kafka-console-consumer.sh --topic test --bootstrap-server localhost:9093
+kafka-console-consumer.sh --topic test --bootstrap-server kafka-svc.default.svc.cluster.local:9093
+
+cd nge/binary/confluent/bin
+~/nge/binary/confluent/bin/kafka-mirror-maker --consumer.config ../conf/consumer-B.properties --producer.config ../conf/producer-B.properties --whitelist test-B
+~/nge/binary/confluent/bin/kafka-mirror-maker --consumer.config ../conf/consumer-A.properties --producer.config ../conf/producer-A.properties --whitelist test-A
+~/nge/binary/confluent/bin/kafka-console-consumer --topic test --bootstrap-server 10.34.54.176:9092
+~/nge/binary/confluent/bin/kafka-console-consumer --topic test --bootstrap-server 10.34.54.168:9092
 ```
 
 ### Kafka Manager
